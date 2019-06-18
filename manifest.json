@@ -1,0 +1,28 @@
+{
+    "manifest_version": 2,
+    "name": "Enhanced Master Vault",
+    "short_name": "Enhanced Master Vault",
+    "version": "0.1",
+    "permissions": [
+        "activeTab",
+        "cookies",
+        "declarativeContent",
+        "storage",
+        "https://www.keyforgegame.com/"
+    ],
+    "content_scripts": [{
+        "matches": [
+            "https://www.keyforgegame.com/*"
+        ],
+        "js": [
+            "enhanced_master_vault.js"
+        ],
+        "css": [
+            "enhanced_master_vault.css"
+        ]
+    }],
+    "web_accessible_resources": ["dokicon-16x16.png"],
+    "icons": {
+        "100": "icon.png"
+    }
+}
