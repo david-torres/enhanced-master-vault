@@ -1,26 +1,16 @@
 const apiKey = ""
-const timeout = 1000
+const deckListSelector = '.kf-table__body'
 
-// add handlers to all the various places that load a new set of decks
-const addMyDecksClickHandlers = e => {
-  document.addEventListener('click', e => {
-    if (
-      e.target &&
-      (e.target.matches('.pagination__link') ||
-        e.target.matches('.pagination__arrow') ||
-        e.target.matches('.icon-checkbox__icon--favorite') ||
-        e.target.matches('.decks-filters__search-btn span.btn-content'))
-    ) {
-      setTimeout(loadMyDecks, timeout)
-      setTimeout(addMyDecksClickHandlers, timeout)
-    }
-  })
+const getMenuOpener = () => {
+  return document.querySelector('#menu-opener')
 }
 
-const loadMyDecks = () => {
-  let decks = document.querySelectorAll(
-    '.my-decks-page__decks-list td.kf-table__cell.deck-list__name-field > div.deck-list__deck-name > a'
-  )
+const getDecks = () => {
+  return document.querySelectorAll('div.deck-list__deck-name > a')
+}
+
+const modifyDeckList = () => {
+  let decks = getDecks()
 
   // remove old buttons
   document.querySelectorAll('.OpenMenuButton').forEach(el => {
@@ -42,20 +32,44 @@ const loadMyDecks = () => {
   })
 }
 
+// watch for changes to the deck list
+const deckListMutationObserver = () => {
+  var targetNode = document.querySelector(deckListSelector)
+  var observerOptions = {
+    childList: true,
+    attributes: false,
+    subtree: false
+  }
+
+  var observer = new MutationObserver(modifyDeckList)
+  observer.observe(targetNode, observerOptions)
+}
+
+// request deck data from Decks Of Keyforge and populate menu
 const loadDokData = (event) => {
   let el = event.target
   let deckId = el.dataset.deckId
 
+  // cleanup stale view
+  let deckContainer = document.querySelector('#deck-container')
+  deckContainer.innerHTML = ""
+
   fetch('https://decksofkeyforge.com/public-api/v3/decks/' + deckId, {
-      headers: {
-        'Api-Key': apiKey
-      },
-      method: 'GET'
-    })
+    headers: {
+      'Api-Key': apiKey
+    },
+    method: 'GET'
+  })
     .then(response => response.json())
     .then(response => {
       let deck = response.deck
-      console.log(deck)
+
+      if (Object.keys(deck).length === 0) {
+        getMenuOpener().checked = false
+        alert('Deck data not available')
+        return
+      }
+
       let deckBody = document.createRange().createContextualFragment(`
         <a href="https://decksofkeyforge.com/decks/${deck.keyforgeId}">
           <h3>
@@ -76,7 +90,7 @@ const loadDokData = (event) => {
         <p>${Number(deck.artifactControl)} Artifact Control</p>
         <p>${Number(deck.creatureControl)} Creature Control</p>
         <p>${Number(deck.deckManipulation)} Deck Manipulation</p>
-        <p>${Number(deck.effectivePower)/10} Creature Power</p>
+        <p>${Number(deck.effectivePower) / 10} Creature Power</p>
         <hr>
         <p>${Number(deck.rawAmber)} Bonus Aember</p>
         <p>${Number(deck.keyCheatCount)} Key Cheat</p>
@@ -89,9 +103,12 @@ const loadDokData = (event) => {
         <p>${Number(deck.artifactCount)} Artifacts</p>
       `);
 
-      let deckContainer = document.querySelector('#deck-container')
-      deckContainer.innerHTML = ""
       deckContainer.appendChild(deckBody)
+    })
+    .catch(() => {
+      getMenuOpener().checked = false
+      alert('Error accessing Decks of Keyforge')
+      return
     })
 }
 
@@ -104,7 +121,7 @@ menuCheck.setAttribute('hidden', '')
 
 document.body.appendChild(menuCheck)
 
-// create the menu
+// create the drawer menu
 let menu = document.createRange().createContextualFragment(`
 <aside class="DrawerMenu">
   <nav class="Menu">
@@ -116,5 +133,6 @@ let menu = document.createRange().createContextualFragment(`
 `)
 document.body.appendChild(menu)
 
-addMyDecksClickHandlers()
-setTimeout(loadMyDecks, timeout)
+// wait for initial load so that we can then observe changes
+document.arrive(deckListSelector, modifyDeckList)
+document.arrive(deckListSelector, deckListMutationObserver)
